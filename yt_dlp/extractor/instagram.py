@@ -168,14 +168,14 @@ class InstagramBaseIE(InfoExtractor):
             'thumbnails': thumbnails
         }
 
-    def _extract_product(self, product_info):
+    def _extract_product(self, product_info, username):
         if isinstance(product_info, list):
             product_info = product_info[0]
 
         user_info = product_info.get('user') or {}
         info_dict = {
             'id': _pk_to_id(traverse_obj(product_info, 'pk', 'id', expected_type=str_or_none)[:19]),
-            'title': product_info.get('title') or f'Video by {user_info.get("username")}',
+            'title': product_info.get('title') or f'Video by {username}',
             'description': traverse_obj(product_info, ('caption', 'text'), expected_type=str_or_none),
             'timestamp': int_or_none(product_info.get('taken_at')),
             'channel': user_info.get('username'),
@@ -194,7 +194,7 @@ class InstagramBaseIE(InfoExtractor):
             return {
                 '_type': 'playlist',
                 **info_dict,
-                'title': f'Post by {user_info.get("username")}',
+                'title': f'Post by {username}',
                 'entries': [{
                     **info_dict,
                     **self._extract_product_media(product_media),
@@ -703,7 +703,7 @@ class InstagramStoryIE(InstagramBaseIE):
         user_info = self._search_json(r'"user":', story_info, 'user info', story_id, fatal=False)
         if not user_info:
             self.raise_login_required('This content is unreachable')
-        user_id = user_info.get('id')
+        user_id = user_info.get('pk')
 
         story_info_url = user_id if username != 'highlights' else f'highlight:{story_id}'
         videos = traverse_obj(self._download_json(
@@ -720,7 +720,7 @@ class InstagramStoryIE(InstagramBaseIE):
         highlights = traverse_obj(videos, (f'highlight:{story_id}', 'items'), (str(user_id), 'items'))
         info_data = []
         for highlight in highlights:
-            highlight_data = self._extract_product(highlight)
+            highlight_data = self._extract_product(highlight, username)
             if highlight_data.get('formats'):
                 info_data.append({
                     **highlight_data,
